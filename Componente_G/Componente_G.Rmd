@@ -1,0 +1,17 @@
+---
+title: "Componente G"
+author: "Sebatian Arias"
+date: '2022-03-19'
+output: html_document
+---
+
+```{r setup, include = TRUE, eval = TRUE, collapse=TRUE}
+x <- 1:10
+y <- x^2
+plot(x, y, type = "l", lwd = 2, col = "Purple")
+```
+
+## Componente G
+
+$$G = mc^2$$
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
