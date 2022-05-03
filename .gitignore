@@ -1,8 +1,7 @@
 .RData
 .Rhistory
 .Rproj.user
-.Rproj
-C\303\263digo.Rproj
+*.Rproj
 3_exploratory/Análisis_Mercado_cache
 3_exploratory/Análisis_Mercado_files
 .rdb
