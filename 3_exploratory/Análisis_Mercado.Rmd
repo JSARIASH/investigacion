@@ -1,0 +1,269 @@
+---
+title: "Análisis del mercado"
+author: "Sebatian Arias"
+date: '2022-03-19'
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    theme: cerulean
+    highlight: kate
+---
+<style type="text/css">
+
+body {
+   font-size: 17px;
+   text-align: justify;
+}
+code.r{
+  font-size: 15px;
+}
+pre {
+  font-size: 17px
+}
+</style>
+
+```{r, eval=TRUE,  message=FALSE, echo=FALSE, cache=TRUE, warning=FALSE}
+
+source("../6_tool_kit/set_up_rmakdown.R")
+
+# library(ggplot2)
+# library(dplyr)
+# library(stringr)
+# library(lubridate)
+# library(ggplot2)
+# library(dplyr)
+# library(stringr)
+# library(lubridate)
+
+precio_bolsa <- read_csv(file = "../2_data_results/precio_bolsa_1995_2022.csv", 
+                         col_names = TRUE, col_types = list("D", "c", "d"))
+precio_contratos <- read_csv(file = "../2_data_results/ppp_mensual_contratos_2000_2022.csv",
+                         col_names = TRUE, col_types = list("D", "c", "d", "d"))
+
+```
+
+# Precio de bolsa
+Comportamiento del precio ***spot*** desde el 20-07-1995 hasta el 31-12-2020.
+
+## Precio por horas.
+
+Para cada hora, se grafica la evolución del precio para todo el rango de las fechas. Para $p_{0}$, toda la serie de tiempo. De igual manera con todas las horas. En total deben de aparecer 24 líneas. 
+
+
+```{r, echo=FALSE, fig.align='left', warning=FALSE, eval=TRUE, fig.height=12, fig.width=15}
+source("../6_tool_kit/set_up_rmakdown.R")
+
+ggplot(data = precio_bolsa, aes(x = Fecha, y = precio, group = hora)) + 
+  geom_line(alpha = I(1/20)) + theme_linedraw() + 
+  ylab(label = expression("$"*"/"*Kwh))
+
+```
+
+Se grafican algunas horas del gráfico anterior. Por ejemplo la hora cero. 
+
+```{r, echo=FALSE, fig.align='left', warning=FALSE, eval=TRUE, fig.height=12, fig.width=15}
+ggplot(data = precio_bolsa, aes(x = Fecha, y = precio, group = hora)) + 
+  geom_line(alpha = I(1/10), colour = "black") + theme_linedraw() + 
+  ylab(label = expression("$"*"/"*Kwh)) + 
+  geom_line(data = precio_bolsa %>% filter(hora == "p_13"), 
+            aes(x = Fecha, y = precio), colour = "purple", alpha = 0.8, size = 0.5)
+```
+
+
+Evolución del precio hora a hora (0 a 23) para todos los días desde las fecha inicial. Se crea una nueva variable como línea de tiempo que involucra la hora, día, mes y año. De esta forma solo se tiene una sola línea con todos los precios.  
+
+```{r precio_hora_hora, eval=TRUE, echo=FALSE, fig.align='left', warning=FALSE, message=FALSE, fig.height=12, fig.width=15}
+precio_bolsa %>% mutate(hora_dia = factor(hora, levels = c(unique(precio_bolsa$hora)))) %>% 
+  arrange(Fecha, hora_dia) %>% 
+  mutate(
+    fecha_hora = ymd_h(paste(Fecha, as.integer(str_extract(hora_dia, "[0-9]+"))))
+    ) %>% 
+  ggplot(aes(fecha_hora, precio)) + geom_line(alpha = 1) + theme_linedraw() +
+  ylab(label = expression("$"*"/"*Kwh)) +  xlab(label = "Fecha")
+```
+
+Media móvil del precio de 24 periodos, es igual al promedio diario. 
+
+r precio_hora_hora, eval=TRUE, echo=FALSE, fig.align='left', warning=FALSE, message=FALSE, fig.height=12, fig.width=15}
+precio_bolsa %>% mutate(hora_dia = factor(hora, levels = c(unique(precio_bolsa$hora)))) %>% 
+  arrange(Fecha, hora_dia) %>% 
+  mutate(
+    media_movil = rollmean(precio, k = 2, na.pad = TRUE)                   
+  )
+    
+
+
+Precio promedio de los contratos mensuales con el precio spot. 
+
+```{r precio_hora_hora_contratos, eval=TRUE, echo=FALSE, fig.align='left', warning=FALSE, message=FALSE, fig.height=12, fig.width=15}
+
+precio_bolsa %>% mutate(hora_dia = factor(hora, levels = c(unique(precio_bolsa$hora)))) %>% 
+  arrange(Fecha, hora_dia) %>% 
+  mutate(
+    dia_entero = ymd_h(paste(Fecha, as.integer(str_extract(hora_dia, "[0-9]+"))))
+    ) %>% 
+  ggplot(aes(dia_entero, precio)) + geom_line(alpha = 1) + theme_linedraw() +
+  ylab(label = expression("$"*"/"*Kwh)) +  xlab(label = "Fecha") +
+geom_line(data = precio_contratos %>% mutate(Fecha = ymd_h(paste(Fecha, 0))), 
+            aes(x = Fecha, y = `COP/Kwh-PPP`, group = Usuario, colour = Usuario), 
+            inherit.aes = FALSE, size = 0.8) +
+  scale_color_manual(values = c("#59c7f2", "#AC6BFF")) +
+  theme(legend.position = "none")
+```
+Fenómeno de la niña.
+
+```{r niña, eval=TRUE, echo=FALSE, fig.align='left', warning=FALSE, message=FALSE, fig.height=12, fig.width=15}
+
+precio_bolsa %>% mutate(hora_dia = factor(hora, levels = c(unique(precio_bolsa$hora)))) %>% 
+  arrange(Fecha, hora_dia) %>% 
+  mutate(
+    dia_entero = ymd_h(paste(Fecha, as.integer(str_extract(hora_dia, "[0-9]+"))))
+    ) %>% 
+  ggplot(aes(dia_entero, precio)) + geom_line(alpha = 1) + theme_linedraw() +
+  ylab(label = expression("$"*"/"*Kwh)) +  xlab(label = "Fecha") +
+geom_line(data = precio_contratos %>% mutate(Fecha = ymd_h(paste(Fecha, 0))), 
+            aes(x = Fecha, y = `COP/Kwh-PPP`, group = Usuario, colour = Usuario), 
+            inherit.aes = FALSE, size = 0.8) +
+  scale_color_manual(values = c("#59c7f2", "#AC6BFF")) +
+  theme(legend.position = "none") +
+  geom_rect(data = tibble(), 
+            aes(xmin = ymd_h("2015-01-01 0"), xmax = ymd_h("2016-12-01 0"),
+                ymin = -Inf, ymax = Inf
+                ), inherit.aes = FALSE,
+            colour = NA, alpha = 0.1, fill="red"
+            )
+
+```
+
+
+## Paneles
+
+Evolución del precio para cada hora desde el 1995. 
+
+```{r, eval=TRUE, echo=FALSE, fig.align='left', warning=FALSE, message=FALSE, fig.height=12, fig.width=15}
+ggplot(data = precio_bolsa, aes(x = Fecha, y = precio)) + 
+  geom_line() + theme_linedraw() + facet_wrap(~factor(hora, levels = unique(hora)), ncol = 4) +
+  ylab(label = expression("$"*"/"*Kwh)) +  xlab(label = "Fecha")
+
+```
+
+Evolución del precio para cada hora desde 1995.
+
+```{r, eval=TRUE, echo=FALSE, fig.align='left', warning=FALSE, message=FALSE, fig.height=12, fig.width=15}
+precio_bolsa %>% mutate(año = year(Fecha)) %>% group_by(año, hora) %>%
+  mutate(indice = as.numeric(format(Fecha, "%j"))) %>% ungroup() %>% 
+  ggplot(aes(indice, precio, group = interaction(año, hora), colour = año))+ 
+  geom_line(alpha = 1) + 
+  facet_wrap(~factor(hora, levels = unique(hora)), ncol = 4) + theme_linedraw() +
+  ylab(label = expression("$"*"/"*Kwh)) +  xlab(label = "Día del año") + 
+  theme(legend.position = "bottom")
+
+```
+
+Se filtran por fechas menores al 01-01-2013. 
+
+```{r, eval=TRUE, echo=FALSE, fig.align='left', warning=FALSE, message=FALSE, fig.height=12, fig.width=15}
+
+precio_bolsa %>% filter(Fecha <= ymd("2013-01-01")) %>% mutate(año = year(Fecha)) %>% group_by(año, hora) %>%
+  mutate(indice = as.numeric(format(Fecha, "%j"))) %>% ungroup() %>% 
+  ggplot(aes(indice, precio, group = interaction(año, hora), colour = año))+ 
+  geom_line(alpha = 1) + 
+  facet_wrap(~factor(hora, levels = unique(hora)), ncol = 4) + theme_linedraw() +
+  ylab(label = expression("$"*"/"*Kwh)) +  xlab(label = "Día del año") +
+  theme(legend.position = "bottom")
+
+```
+
+Se filtran por fechas mayores al 01-01-2013.
+
+
+```{r, eval=TRUE, echo=FALSE, fig.align='left', warning=FALSE, message=FALSE, fig.height=12, fig.width=15}
+
+precio_bolsa %>% filter(Fecha >= ymd("2013-01-01")) %>% mutate(año = year(Fecha)) %>% group_by(año, hora) %>%
+  mutate(indice = as.numeric(format(Fecha, "%j"))) %>% ungroup() %>% 
+  ggplot(aes(indice, precio, group = interaction(año, hora), colour = año))+ 
+  geom_line(alpha = 1) + 
+  facet_wrap(~factor(hora, levels = unique(hora)), ncol = 4) + theme_linedraw() + 
+  geom_abline(slope = 0, intercept = 2000, colour = "red", lty = 3) +
+  ylab(label = expression("$"*"/"*Kwh)) +  xlab(label = "Fecha") +
+  theme(legend.position = "bottom")
+
+```
+
+
+Zoom a algunas regiones. 
+
+```{r, eval=TRUE, echo=FALSE, fig.align='left', warning=FALSE, message=FALSE, fig.height=12, fig.width=15, cache=TRUE}
+datos_precio_fecha_hora <- precio_bolsa %>% mutate(hora_dia = factor(hora, levels = unique(hora))) %>% 
+  arrange(Fecha, hora_dia) %>% 
+  mutate(
+    dia_entero = ymd_h(paste(Fecha, as.integer(str_extract(hora_dia, "[0-9]+"))))
+  ) 
+
+p1 <- datos_precio_fecha_hora %>% 
+  ggplot(aes(dia_entero, precio)) + geom_line(alpha = 1) + theme_linedraw() +
+  geom_line(data = precio_contratos %>% mutate(Fecha = ymd_h(paste(Fecha, 0))), 
+            aes(x = Fecha, y = `COP/Kwh-PPP`, group = Usuario, colour = Usuario), 
+            inherit.aes = FALSE, size = 1.1) +
+  scale_color_manual(values = c("#59c7f2", "#AC6BFF")) + 
+    geom_rect(data = tibble(),
+    aes(xmin = ymd_h("1995-07-20 00"), xmax = ymd_h("1996-06-01 00"), ymin = 0, ymax = 200), 
+    color='salmon', linetype='dashed', alpha=0, inherit.aes = FALSE) + 
+    ylab(label = expression("$"*"/"*Kwh)) +  xlab(label = "Fecha")
+
+p2 <- datos_precio_fecha_hora %>% 
+  ggplot(aes(dia_entero, precio)) + geom_line(alpha = 1) + theme_linedraw() +
+  geom_line(data = precio_contratos %>% mutate(Fecha = ymd_h(paste(Fecha, 0))), 
+            aes(x = Fecha, y = `COP/Kwh-PPP`, group = Usuario, colour = Usuario), 
+            inherit.aes = FALSE, size = 1) +
+  scale_color_manual(values = c("#59c7f2", "#AC6BFF")) +
+  coord_cartesian(xlim = c(ymd_h("1995-07-20 00"), ymd_h("1996-06-01 00")), 
+                  ylim = c(0, 200)) + 
+  theme(legend.position = "none") + xlab(label = "") + ylab(label = "")
+
+p1 + 
+  annotation_custom(ggplotGrob(p2), 
+                    xmin = ymd_h("1995-07-20 00"), xmax = ymd_h("2010-01-01 00"), 
+                    ymin = 500, ymax = 2000) +
+  geom_rect(data = tibble(),
+    aes(xmin = ymd_h("1995-07-20 00"), xmax = ymd_h("2010-01-01 00"), ymin = 500, ymax = 2000), 
+    color='black', linetype='dashed', alpha=0, inherit.aes = FALSE) +
+  geom_path(
+    aes(x,y,group=grp), 
+        data=data.frame(
+        x = c(ymd_h("1995-07-20 00"),ymd_h("1995-07-20 00"),ymd_h("1996-06-01 00"), ymd_h("2010-01-01 00")), 
+        y = c(200,500,200,500),grp=c(1,1,2,2)),
+            linetype='dashed', colour = "salmon")
+
+```
+
+Otra región. 
+
+```{r, eval=TRUE, echo=FALSE, fig.align='left', warning=FALSE, message=FALSE, fig.height=12, fig.width=15, cache=TRUE}
+p1 <- datos_precio_fecha_hora %>% 
+  ggplot(aes(x = dia_entero, y = precio)) + geom_line() + theme_linedraw() + 
+  geom_line(data = precio_contratos %>% mutate(fecha_hora = ymd_h(paste(Fecha, 0))), 
+            aes(x = fecha_hora, y = `COP/Kwh-PPP`, colour = Usuario), size = 1.1) + 
+  scale_color_manual(values = c("#59c7f2", "#AC6BFF")) + 
+  geom_rect(data = tibble(), 
+            aes(xmin = c(ymd_h("1996-01-01 00"), ymd_h("2000-01-01 00")), xmax = c(ymd_h("2014-01-01 00"), ymd_h("2000-12-31 00")),
+                       ymin = c(1000, 0),  ymax = c(2500, 100)), inherit.aes = FALSE, alpha = 0, 
+             colour = "salmon", linetype = "dashed") +
+  ylab(label = expression("$"*"/"*Kwh)) +  xlab(label = "Fecha")
+
+p2 <- datos_precio_fecha_hora %>% 
+  ggplot(aes(x = dia_entero, y = precio)) + geom_line() + theme_linedraw() + 
+  geom_line(data = precio_contratos %>% mutate(fecha_hora = ymd_h(paste(Fecha, 0))), 
+            aes(x = fecha_hora, y = `COP/Kwh-PPP`, colour = Usuario), inherit.aes = FALSE, size = 1.1) + 
+  scale_color_manual(values = c("#59c7f2", "#AC6BFF")) + 
+  coord_cartesian(xlim = c(ymd_h("2000-01-01 00"), ymd_h("2000-12-31 00")), 
+                  ylim = c(0, 150)) +
+  theme(legend.position = "none") + xlab(label = "") + ylab(label = "")
+
+
+p1 + annotation_custom(ggplotGrob(p2), 
+                       xmin = ymd_h("1996-01-01 00"), xmax = ymd_h("2014-01-01 00"),
+                       ymin = 1000, ymax = 2500)
+```
+
