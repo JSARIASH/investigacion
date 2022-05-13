@@ -1,0 +1,58 @@
+---
+title: "Volumen Transado"
+author: "Sebastián Arias"
+date: "5/12/2022"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    theme: journal
+    highlight: kate
+---
+
+<style type="text/css">
+ body {
+   font-size: 18px;
+   text-align: justify;
+   color: #000000;
+ }
+ code.r{
+  font-size: 15px;
+}
+pre {
+  font-size: 20px
+}
+</style>
+
+## Volumen transado
+
+Identificar cual es la estrategia que emplean los comercializadores en la compra de energía por volumen. 
+
+```{r}
+source(file = "../../6_tool_kit/set_up_rmakdown.R")
+# Se especifica el inicio y el fin de la fila. 
+# read_excel(path = "../../0_raw_data/Listado_Agentes/Listado_Agentes.xlsx", range = cell_rows(4:562), col_types = rep("text", 5), col_names = TRUE)
+
+# Se especifica el la celda del rectángulo superior izquierda. Esta es el punto de partida y de allí
+# adivina la fila y columna. 
+agentes <- read_excel(
+  path = "../../0_raw_data/Listado_Agentes/Listado_Agentes.xlsx", 
+  range = cell_limits(c(4, 1), c(NA, NA)), 
+  col_types = rep("text", 5), col_names = TRUE
+  ) 
+
+colnames(agentes) <- str_replace_all(colnames(agentes), "\\s", "_")
+colnames(agentes) <- stringi::stri_trans_general(colnames(agentes), id = "Latin-ASCII")
+agentes <- agentes %>% filter(Actividad == "COMERCIALIZACIÓN")
+
+
+enca <- c("fecha", "codigo_agente", paste0("h_", 0:23))
+compras_contratos <- read_excel(
+  path = "../../0_raw_data/Compras_contratos_Kw/Compras_Contrato_(kwh)_2000.xlsx", 
+  range = cell_limits(c(3, 1), c(NA, NA)), 
+  col_types = c("date", "text", rep("numeric", 24))
+  )
+colnames(compras_contratos)[1:26] <- enca
+
+```
+

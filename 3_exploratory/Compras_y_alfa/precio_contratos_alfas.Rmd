@@ -1,0 +1,373 @@
+---
+title: "Análisis descriptivo de la componnete G"
+subtitle: Relación con el parámetro alfa
+output:
+  html_document:
+    toc: yes
+    toc_float: yes
+    theme: journal
+    highlight: kate
+  pdf_document:
+    toc: yes
+header-includes:
+- \usepackage{caption}
+- \usepackage{amssymb}
+- \usepackage{multirow}
+- \usepackage{cancel}
+---
+
+<style type="text/css">
+
+body {
+   font-size: 13px;
+   text-align: justify;
+   color: #000000;
+}
+code.r{
+  font-size: 15px;
+}
+pre {
+  font-size: 20px
+}
+</style>
+
+\newpage
+
+## Componente ***G***
+
+La componente ***G*** del costo unitario permite trasladar los costos de la compra de energía al usuario final. En esta componente se tiene en cuenta las compras en bilaterales, bolsa y futuros. 
+
+\begin{align}
+G_{m, i, j} =\omega_{1, m-1,i} \cdot
+Qc_{m-1, i} \cdot(\alpha_{i,j} \cdot  Pc_{m-1,i} + (1-\alpha_{i,j})\cdot Mc_{m-1}) + \\ \qquad \omega_{2, m-1,i} \cdot Qc_{m-1, i} * PSA_{m-1,1} + CUG_{m-1,i} - EGP_{i} +\\ 
+\sum_{l=3}^{n} \omega_{l, m-1,i} \cdot Qc_{m-1, i} \cdot P_{l, m-1, i} +
+ \\(1 - Qc_{m-1,i} - Qadg_{m-1, i}) \cdot Pb_{m-1,i} + \\ G\_transitorio_{m,i,j} + Aj_{m,i}
+\end{align}
+
+Diferentes actores del mercado han manifestado que el traslado de los costos puede no ser eficiente debido a: 
+ 
+ * El comercializador no asume responsabilidad por su ineficiencia. 
+ * Los costos son trasladados al usuario como un pass-through.
+ * Los comercializadores no están obligados a contratar quedando expuestos al precio de bolsa. 
+ * Los contratos no quedan vinculados al despacho. 
+ * No hay un castigo por incumplimientos 
+ * Pueden haber oportunidades de arbitraje. 
+
+Una característica que llama la atención es que el precio promedio para los usuarios regulados es mayor que para los usuarios no regulados. 
+
+<br>
+
+```{r precios_bolsa_contratos_promedios, eval = TRUE, cache=TRUE, warning=FALSE, error=FALSE, echo=FALSE, fig.align='center', fig.height=12, fig.width=15}
+
+source(file = "../../6_tool_kit/set_up_rmakdown.R")
+
+precio_bolsa <- read_csv(file = "../../2_data_results/precio_bolsa_1995_2022.csv", 
+                         col_names = TRUE, col_types = list("D", "c", "d"))
+precio_contratos <- read_csv(file = "../../2_data_results/ppp_mensual_contratos_2000_2022.csv",
+                         col_names = TRUE, col_types = list("D", "c", "d", "d"))
+
+precio_bolsa %>% mutate(hora_dia = factor(hora, levels = c(unique(precio_bolsa$hora)))) %>% 
+  arrange(Fecha, hora_dia) %>% 
+  mutate(
+    dia_entero = ymd_h(paste(Fecha, as.integer(str_extract(hora_dia, "[0-9]+"))))
+    ) %>% 
+  ggplot(aes(dia_entero, precio)) + geom_line(alpha = 1) + theme_linedraw() +
+  ylab(label = expression("COP"*"/"*Kwh)) +  xlab(label = "Año") +
+  ggtitle(label = "Precio bolsa y contratos") + 
+  geom_line(data = precio_contratos %>% mutate(Fecha = ymd_h(paste(Fecha, 0))), 
+            aes(x = Fecha, y = `COP/Kwh-PPP`, group = Usuario, colour = Usuario), 
+            inherit.aes = FALSE, size = 1.2) +
+  scale_color_manual(values = c("#59c7f2", "#AC6BFF")) +
+  theme(legend.position = "bottom", 
+        text = element_text(size = 22)
+        ) + labs(colour = "Usuario:")
+```
+
+<br>
+
+Las observaciones y la gráfica anterior lleva a pensar que el mercado de energía mayorista presenta algunas falencias. 
+
+<br>
+
+
+## ¿Hay relación entre el valor $\alpha$ y el precio de los contratos?
+
+El parámetro $\alpha$ fue introducido con un fator de eficiencia. Este valor permite identifcar si el comecializador traslada los costos propios o los del mercado como bien se puede deducir de la siguiente expresión:
+
+\begin{align}
+G_{m, i, j} =  \alpha_{i,j} \cdot Pc_{m-1,i} + (1-\alpha_{i,j}) \cdot Mc_{m-1} 
+\end{align}
+
+Las preguntas que se buscan responder son: 
+
+* ¿Hay relación entre el valor $\alpha$ de las comercializadoras y el precio al que adquieren los contratos?
+
+Se busca evidenciar si para valores de $\alpha$ *‘‘grandes’’* corresponde precios de contratos altos. Esto se apoya en el hecho de que con un valor $\alpha$ cercano a 1 se pueden transferir todos los costos propios; con valores cercanos a cero se transfiere el precio del mercado. 
+
+## Datos
+
+Con el siguiente conjunto de datos se busca evidenciar la pregunta anterior. 
+
+### Valores $\alpha$
+En la tabla siguiente se encuentran los valores $\alpha$ para algunas comercializadoras. 
+
+
+```{r alfas, echo=FALSE, eval=TRUE, message=FALSE}
+library(DT)
+source(file = "../../7_parameters/alfas.R")
+datatable(alfas_comercializadoras, colnames = c("Comercializador", "Alfa"), 
+          options = list(
+            dom = 't',
+            language = list(url = '//cdn.datatables.net/plug-ins/1.10.11/i18n/Spanish.json'),
+            columnDefs = list(list(className = 'dt-center', targets = 0:1)),
+            scroller = TRUE,
+            ordering = TRUE, 
+            scrollY = 725,
+            scrollX = 500,
+            deferRender = TRUE,
+            pageLength = 28
+          ), 
+          rownames = FALSE
+          )
+
+```
+
+
+### Precio de los contratos
+
+
+```{r precio-contratos, eval=TRUE, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE}
+
+source(file = "../../6_tool_kit/set_up_rmakdown.R")
+
+contratos_sicep <- read_excel(
+  path = "../../0_raw_data/SICEP_Contratos/Resumen_Productos_Adjudicados_SICEP.xlsx", 
+  skip = 2, col_names = TRUE, col_types = c(rep("text", 14), rep("numeric", 3))
+  )
+
+nombres <- stringi::stri_trans_general(colnames(contratos_sicep), id = "Latin-ASCII")
+nombres <- str_remove_all(nombres, "[\\(\\)]")
+nombres <- str_replace_all(nombres, "\\s", "_")
+colnames(contratos_sicep) <- nombres
+contratos_sicep <- contratos_sicep %>% mutate_at(7:12, ymd) %>% mutate_at(13:14, ymd_hm)
+
+#Se eliminan sas y empresas de servicios públicos:  S.A.S E.S.P.
+# (PEREIRA)
+
+contratos_sicep$Nombre_Corto <- str_remove_all(
+  contratos_sicep$Nombre_Corto, 
+  pattern = "(\\.?\\s?S?\\.A?\\.?S?\\s?E?\\.?S?\\.?P?\\.?)|(\\(PEREIRA\\))"
+  )
+
+datatable(contratos_sicep, 
+          #colnames = c("Código convocatoria", "Alfa"), 
+          options = list(
+            dom = 't',
+            language = list(url = '//cdn.datatables.net/plug-ins/1.10.11/i18n/Spanish.json'),
+            columnDefs = list(list(className = 'dt-center', targets = 0:1)),
+            scroller = TRUE,
+            ordering = TRUE, 
+            scrollY = 725,
+            scrollX = 500,
+            deferRender = TRUE,
+            pageLength = nrow(contratos_sicep) + 5
+          ), 
+          rownames = FALSE
+          ) 
+```
+
+### Datos para el análisis
+
+Con las tablas anteriores se crea una nueva donde coincida el nombre del comercializador.
+
+```{r datos_analisis, eval=TRUE, echo=FALSE, warning=FALSE, message=FALSE}
+
+contratos_alfas <- inner_join(
+  alfas_comercializadoras, contratos_sicep, 
+  by = c("comercializador" = "Nombre_Corto")
+  ) %>% 
+  select(c(1:2, 7, 9:10, 16:18)) %>% 
+  mutate(
+    dias_contratados = as.numeric(Fin_Periodo_Contratar - Inicio_Periodo_Contratar)
+    )
+
+promedio_precio <- contratos_alfas %>% filter(Cantidad_Energia_Adjudicada_GWh > 0) %>% 
+  mutate(dyp = Cantidad_Energia_Adjudicada_GWh * `Promedio_Ponderado_Convocatoria_COP/kWh`) %>% 
+  summarise(p = sum(dyp) / sum(Cantidad_Energia_Adjudicada_GWh)) %>% pull
+
+datatable(contratos_alfas, 
+          #colnames = c("Código convocatoria", "Alfa"), 
+          options = list(
+            dom = 't',
+            language = list(url = '//cdn.datatables.net/plug-ins/1.10.11/i18n/Spanish.json'),
+            columnDefs = list(list(className = 'dt-center', targets = 0:1)),
+            scroller = TRUE,
+            ordering = TRUE, 
+            scrollY = 725,
+            scrollX = 500,
+            deferRender = TRUE,
+            pageLength = nrow(contratos_alfas) + 5
+          ), 
+          rownames = FALSE
+          )
+
+```
+
+<br>
+
+## Análisis
+Las gráficas siguientes tienen información de los contratos a partir del año 2020. Para este periodo solo se tienen ofertas cerradas y adjudicadas para el mercado regulado.
+
+### Precio vs demanda
+
+El precio parece no verse afectado por el volumen ya que para diferentes cantidades el nivel del precio es similar. Lo extraño es que para precios inferiores a $1000 \, Gwh$ el precio es muy volátil. 
+
+```{r precio_vs_demanda, eval = TRUE, cache=TRUE, warning=FALSE, error=FALSE, echo=FALSE, fig.align='center', fig.height=12, fig.width=15}
+contratos_alfas %>% filter(Cantidad_Energia_Adjudicada_GWh > 0) %>% 
+ggplot(aes(Cantidad_Energia_Adjudicada_GWh, `Promedio_Ponderado_Convocatoria_COP/kWh`)) + 
+  geom_point(size = 4) + theme_linedraw() + xlab(label = "Energía adjudicada (Gwh)") + ylab(label = expression(COP/Kwh)) + 
+  theme(text = element_text(size = 22)) +
+  geom_hline(yintercept = promedio_precio, colour = "darkgreen", lty = 2)
+```
+
+<!-- ### Se incluye el $\alpha$ -->
+
+<!-- Comercializadoras con valores de $\alpha$ menores a 0.4 no realizan contratos de energía de más de $1000 Gwh$. No se observa relación entre el valor del parámetro y el precio de los contratos.  -->
+
+
+<!-- ```{r precio_vs_demanda_alfas, eval = TRUE, cache=TRUE, warning=FALSE, error=FALSE, echo=FALSE, fig.align='center', fig.height=12, fig.width=15} -->
+<!-- contratos_alfas %>% filter(Cantidad_Energia_Adjudicada_GWh > 0) %>%  -->
+<!--   ggplot(aes(Cantidad_Energia_Adjudicada_GWh, `Promedio_Ponderado_Convocatoria_COP/kWh`, colour = alfas)) +  -->
+<!--   geom_point(size = 4, position = "jitter") + theme_linedraw() + xlab(label = "Energía adjudicada (Gwh)") + ylab(label = expression(COP/Kwh)) + -->
+<!--   theme( -->
+<!--     text = element_text(size = 22),  -->
+<!--     legend.position = "bottom",  -->
+<!--     legend.justification = "left", -->
+<!--     legend.key.width= unit(1.5, 'cm') -->
+<!--     ) + labs(colour = expression("Valor " * alpha * ":")) + -->
+<!--   geom_hline(yintercept = promedio_precio, colour = "darkgreen", lty = 2) -->
+<!-- ``` -->
+
+### Precio vs alfa
+
+Al igual que el gráfico anterior no se evidencia una relación entre el ponderador y el precio. 
+
+```{r alfa_vs_precio, eval = TRUE, cache=TRUE, warning=FALSE, error=FALSE, echo=FALSE, fig.align='center', fig.height=12, fig.width=15}
+contratos_alfas %>% filter(Cantidad_Energia_Adjudicada_GWh > 0) %>% 
+  ggplot(aes(alfas, `Promedio_Ponderado_Convocatoria_COP/kWh`)) + 
+  geom_point(size = 4, color = "navy", fill = "royalblue", shape = 21, position = "jitter") + 
+  theme_linedraw() + xlab(label = expression(alpha)) + ylab(label = expression(COP/Kwh)) + 
+  theme(text = element_text(size = 22)) +
+  geom_hline(yintercept = promedio_precio, colour = "darkgreen", lty = 2)
+
+```
+
+### Precio vs alfa + volumen
+
+Las comercializadoras que más contratan tienen valores de $\alpha$ entre 0.7 y 0.8. 
+
+```{r alfa_vs_precio_volumen, eval = TRUE, cache=TRUE, warning=FALSE, error=FALSE, echo=FALSE, fig.align='center', fig.height=12, fig.width=15}
+contratos_alfas %>% filter(Cantidad_Energia_Adjudicada_GWh > 0) %>% 
+  ggplot(aes(alfas, `Promedio_Ponderado_Convocatoria_COP/kWh`, size = Cantidad_Energia_Adjudicada_GWh)) + 
+  geom_point(shape = 21, fill = "royalblue", position = "jitter", colour = "navy") + theme_linedraw() + 
+  xlab(label = expression(alpha)) + ylab(label = expression(COP/Kwh)) +
+  labs(size = "Energía adjudicada Gwh:") + theme(legend.position = "bottom") + 
+  theme(text = element_text(size = 22)) +
+  geom_hline(yintercept = promedio_precio, colour = "darkgreen", lty = 2)
+```
+
+### Precio vs alfa + volumen + duración del contrato
+
+Son pocos los contratos que se negocián a largo plazo. 
+
+```{r alfa_vs_precio_volumen_dias_futuro, eval = TRUE, cache=TRUE, warning=FALSE, error=FALSE, echo=FALSE, fig.align='center', fig.height=12, fig.width=15}
+contratos_alfas %>% filter(Cantidad_Energia_Adjudicada_GWh > 0) %>% 
+  ggplot(
+    aes(alfas, `Promedio_Ponderado_Convocatoria_COP/kWh`, colour = dias_contratados, size = Cantidad_Energia_Adjudicada_GWh)
+  ) + 
+  geom_point(position = "jitter") + theme_linedraw() + 
+  xlab(label = expression(alpha)) + ylab(label = expression(COP/Kwh)) +
+  labs(size = "Energía adjudicada:", colour = "Contrato días: ") + 
+  theme(
+    legend.position="bottom", 
+    text = element_text(size = 18), 
+    legend.justification = "center",
+    legend.key.width= unit(1.5, 'cm')
+     ) + 
+  guides(colour = guide_colourbar(title.position="top", title.hjust = 0.0),
+         size = guide_legend(title.position="top", title.hjust = 0.0)
+         )
+```
+
+### Precios vs comercializador + volumen 
+
+```{r precios_vs_comercializador, eval = TRUE, cache=TRUE, warning=FALSE, error=FALSE, echo=FALSE, fig.align='center', fig.height=12, fig.width=15}
+contratos_alfas %>% filter(Cantidad_Energia_Adjudicada_GWh > 0) %>% 
+ggplot(
+  aes(x = comercializador, `Promedio_Ponderado_Convocatoria_COP/kWh`, size = Cantidad_Energia_Adjudicada_GWh)
+ ) + geom_point(position = position_jitter(width = .1, height = 15), colour = "royalblue3") + theme_linedraw() + scale_x_discrete(guide = guide_axis(n.dodge=2)) + 
+ theme(legend.position = "bottom", text = element_text(size = 15)) + 
+  labs(size = "Energía adjudicada Gwh: ") + ylab("COP/Kwh") + xlab(label = "") +
+  geom_hline(yintercept  = promedio_precio, colour = "darkgreen", lty = 2)
+```
+
+### Gráfico de densidad.
+
+```{r densidad, eval = TRUE, cache=TRUE, warning=FALSE, error=FALSE, echo=FALSE, fig.align='center', fig.height=15, fig.width=15, message=FALSE}
+library("ggridges")
+
+contratos_alfas %>% filter(Cantidad_Energia_Adjudicada_GWh > 0) %>%  
+ggplot(
+  aes(x = `Promedio_Ponderado_Convocatoria_COP/kWh`, y = comercializador)
+ )  + geom_density_ridges(fill = "deepskyblue3", colour = "dodgerblue4", rel_min_height = 0.001) + theme_linedraw() + 
+  ylab("") + xlab(label = "COP/Kwh") + 
+  theme(text = element_text(size = 19)) + 
+  geom_vline(xintercept = promedio_precio, colour = "darkgreen", lty = 2)
+
+
+
+```
+
+### Promedio del mercado vs promedio del comercializador. 
+
+```{r promedio_mercado_promedio_comer, eval = TRUE, cache=TRUE, warning=FALSE, error=FALSE, echo=FALSE, fig.align='center', fig.height=12, fig.width=15, message=FALSE}
+contratos_alfas %>% filter(Cantidad_Energia_Adjudicada_GWh > 0) %>% 
+    mutate(qxp = Cantidad_Energia_Adjudicada_GWh * `Promedio_Ponderado_Convocatoria_COP/kWh`) %>% group_by(alfas, comercializador) %>% 
+    summarise(promedios = sum(qxp) / sum(Cantidad_Energia_Adjudicada_GWh)) %>% ungroup() %>% 
+    ggplot(aes(x = alfas, y = promedios)) + geom_point(size = 3) + theme_linedraw() + 
+    xlab(label = expression(alpha)) + ylab(label = expression(mu[COP/kwh])) + 
+    geom_hline(yintercept  = promedio_precio, colour = "darkgreen", lty = 2) + 
+    theme(text = element_text(size = 22)) + 
+    geom_text(aes(x = alfas, y = promedios, label = comercializador), nudge_y  =  1, nudge_x = -0.01, size = 6)
+
+```
+
+### $\alpha = 0.5$ vertical
+
+```{r , eval = TRUE, cache=TRUE, warning=FALSE, error=FALSE, echo=FALSE, fig.align='center', fig.height=12, fig.width=15, message=FALSE}
+contratos_alfas %>% filter(Cantidad_Energia_Adjudicada_GWh > 0) %>% 
+    mutate(qxp = Cantidad_Energia_Adjudicada_GWh * `Promedio_Ponderado_Convocatoria_COP/kWh`) %>% group_by(alfas, comercializador) %>% 
+    summarise(promedios = sum(qxp) / sum(Cantidad_Energia_Adjudicada_GWh)) %>% ungroup() %>% 
+    ggplot(aes(x = alfas, y = promedios)) + geom_point(size = 3) + theme_linedraw() + 
+    xlab(label = expression(alpha)) + ylab(label = expression(mu[COP/kwh])) + 
+    geom_hline(yintercept  = promedio_precio, colour = "darkgreen", lty = 2) + 
+    theme(text = element_text(size = 22)) + 
+    geom_text(aes(x = alfas, y = promedios, label = comercializador), nudge_y  =  1, nudge_x = -0.01, size = 6) +
+    geom_vline(xintercept  = 0.5, colour = "darkgreen", lty = 2)
+
+```
+
+### EPM y CODENSA: Precio vs Inicio del contratos y volumen. 
+
+```{r condensa_epm, eval = TRUE, cache=TRUE, warning=FALSE, error=FALSE, echo=FALSE, fig.align='center', fig.height=12, fig.width=15, message=FALSE}
+contratos_alfas %>% filter(Cantidad_Energia_Adjudicada_GWh > 0, comercializador %in% c("CODENSA", "EPM")) %>% 
+    ggplot(
+      aes(x = Inicio_Periodo_Contratar, y = `Promedio_Ponderado_Convocatoria_COP/kWh`, 
+          size = Cantidad_Energia_Adjudicada_GWh, colour = comercializador)
+      ) + geom_point() + theme_linedraw() + 
+    xlab(label = "Inicio periodo contratar") + ylab(label = expression(mu[COP/kwh])) + 
+    theme(text = element_text(size = 22), legend.position = "bottom") + 
+    labs(size = "Volumen:", colour = "Comercializador:") 
+
+#unique(contratos_alfas$comercializador)
+```

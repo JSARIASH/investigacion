@@ -131,8 +131,27 @@ datos_precio_bolsa %>% mutate(hora_dia = factor(hora, levels = c(unique(datos_pr
   ggplot(aes(dia_entero, precio)) + geom_line(alpha = 1) + theme_linedraw() +
   geom_line(data = contratos %>% mutate(Fecha = ymd_h(paste(Fecha, 0))), 
             aes(x = Fecha, y = `COP/Kwh-PPP`, group = Usuario, colour = Usuario), 
-            inherit.aes = FALSE, size = 0.8) +
-  scale_color_manual(values = c("#59c7f2", "#AC6BFF"))
+            inherit.aes = FALSE, size = 1.1) +
+  scale_color_manual(values = c("#59c7f2", "#AC6BFF")) + 
+  theme(legend.position = "bottom") + xlab("Ano") + ylab(expression("$" * "/" * Kwh)) +
+  ggtitle(label = "Precio de compras de energía", subtitle = "Spot y contratos")
+
+
+datos_precio_bolsa %>% mutate(hora_dia = factor(hora, levels = c(unique(datos_precio_bolsa$hora)))) %>% 
+  arrange(Fecha, hora_dia) %>% 
+  mutate(
+    dia_entero = ymd_h(paste(Fecha, as.integer(str_extract(hora_dia, "[0-9]+"))))
+  ) %>% 
+  ggplot(aes(dia_entero, precio)) + geom_line(alpha = 1) + theme_linedraw() +
+  geom_line(data = contratos %>% mutate(Fecha = ymd_h(paste(Fecha, 0))), 
+            aes(x = Fecha, y = `COP/Kwh-PPP`, group = Usuario, colour = Usuario), 
+            inherit.aes = FALSE, size = 1.1) +
+  scale_color_manual(values = c("#59c7f2", "#AC6BFF")) + 
+  theme(legend.position = "bottom") + xlab("Ano") + ylab(expression("$" * "/" * Kwh)) +
+  ggtitle(label = "Precio de compras de energía", subtitle = "Spot y contratos") +
+  xlim(c(ymd_h("2000-01-01 00"), ymd_h("2015-01-01 00"))) + 
+  ylim(c(0, 500))
+
 
 
 ### zooming some regisns. 
