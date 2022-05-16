@@ -2,7 +2,11 @@ source(file = "6_tool_kit/set_up_rmakdown.R")
 source(file = "6_tool_kit/toolkit_volumen_kwh.R")
 
 rutas_contratos_kwh <- list.files(path = "0_raw_data/Compras_contratos_Kw/", full.names = TRUE)
-#El año 2020 tiene una columna de mercado. 
+
+# Inconsistencias en los datos. 
+# El año 2020 tiene una columna de mercado. 
+
+
 contratos_kwh_compras <- lapply(rutas_contratos_kwh[1:20], leer_contratos_kwh)
 
 # Año 2020

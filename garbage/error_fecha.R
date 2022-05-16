@@ -34,3 +34,8 @@ class(fechas_corregidas) <- "Date"
 fechas_corregidas[pos_fechas_formato_num] <- as.Date(as.numeric(fechas[fechas_formato_num]), origin = "1899-12-30")
 fechas_corregidas[pos_fechas_formato_ymd] <- ymd(fechas[pos_fechas_formato_ymd])
 
+read_excel(
+  path = rutas_contratos_kwh[13], 
+  range = cell_limits(c(3, 1), c(NA, 26)), #Fila 3 col 1.  
+  col_types = c("text", "text", rep("numeric", 24)),
+)
